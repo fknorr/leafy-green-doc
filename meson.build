@@ -1,6 +1,6 @@
 project('hdoc', 'c', 'cpp', version: '1.4.1', default_options: ['cpp_std=c++20', 'warning_level=3'])
 
-dep_llvm = dependency('LLVM', include_type: 'system')
+dep_llvm = dependency('LLVM', include_type: 'system', static: true)
 llvm_libdir = dep_llvm.get_variable(cmake: 'LLVM_LIBRARY_DIR', configtool: 'libdir')
 dep_clang = meson.get_compiler('cpp').find_library('clang-cpp', dirs: llvm_libdir, required: false)
 if not dep_clang.found()
