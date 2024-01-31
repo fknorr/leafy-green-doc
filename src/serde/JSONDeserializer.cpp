@@ -36,7 +36,7 @@ bool JSONDeserializer::validateJSON(const rapidjson::Document& inputJSON) const 
   rapidjson::Document sd;
 
   if (sd.Parse(schemaJSON).HasParseError()) {
-    spdlog::error("JSON schema bundled with hdoc is not valid");
+    spdlog::error("JSON schema bundled with hdoc is not valid: {}", rapidjson::GetParseError_En(sd.GetParseError()));
     return false;
   }
 
