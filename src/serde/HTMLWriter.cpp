@@ -442,6 +442,18 @@ getBreadcrumbNode(const std::string& prefix, const hdoc::types::Symbol& s, const
   return nav.AddChild(ul);
 }
 
+void appendAsMarkdown(const std::string comment, CTML::Node& node) {
+  if (comment != "") {
+    hdoc::utils::MarkdownConverter converter(comment);
+    auto htmlstring = converter.getHTMLString();
+    if(!htmlstring.empty()) {
+      node.AddChild(CTML::Node("p").AppendRawHTML(htmlstring));
+    } else {
+      node.AddChild(CTML::Node("p", comment));
+    }
+  }
+}
+
 /// Print a function to main
 static void printFunction(const hdoc::types::FunctionSymbol& f,
                           CTML::Node&                        main,
@@ -461,13 +473,9 @@ static void printFunction(const hdoc::types::FunctionSymbol& f,
   if (f.briefComment != "" || f.docComment != "") {
     main.AddChild(CTML::Node("h4", "Description"));
   }
+  appendAsMarkdown(f.briefComment, main);
+  appendAsMarkdown(f.docComment, main);
 
-  if (f.briefComment != "") {
-    main.AddChild(CTML::Node("p", f.briefComment));
-  }
-  if (f.docComment != "") {
-    main.AddChild(CTML::Node("p", f.docComment));
-  }
   main.AddChild(getDeclaredAtNode(f, gitRepoURL, gitDefaultBranch));
 
   // Print function parameters (with type, name, default value, and comment) as a list
@@ -686,12 +694,9 @@ void hdoc::serde::HTMLWriter::printRecord(const hdoc::types::RecordSymbol& c) co
   if (c.briefComment != "" || c.docComment != "") {
     main.AddChild(CTML::Node("h2", "Description"));
   }
-  if (c.briefComment != "") {
-    main.AddChild(CTML::Node("p", c.briefComment));
-  }
-  if (c.docComment != "") {
-    main.AddChild(CTML::Node("p", c.docComment));
-  }
+  appendAsMarkdown(c.briefComment, main);
+  appendAsMarkdown(c.docComment, main);
+
   main.AddChild(getDeclaredAtNode(c, this->cfg->gitRepoURL, this->cfg->gitDefaultBranch));
 
   // Base records
@@ -907,12 +912,9 @@ void hdoc::serde::HTMLWriter::printEnum(const hdoc::types::EnumSymbol& e) const 
   if (e.briefComment != "" || e.docComment != "") {
     main.AddChild(CTML::Node("h2", "Description"));
   }
-  if (e.briefComment != "") {
-    main.AddChild(CTML::Node("p", e.briefComment));
-  }
-  if (e.docComment != "") {
-    main.AddChild(CTML::Node("p", e.docComment));
-  }
+  appendAsMarkdown(e.briefComment, main);
+  appendAsMarkdown(e.docComment, main);
+
   main.AddChild(getDeclaredAtNode(e, this->cfg->gitRepoURL, this->cfg->gitDefaultBranch));
 
   // Enum members in table format

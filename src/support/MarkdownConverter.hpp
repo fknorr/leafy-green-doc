@@ -13,12 +13,19 @@
 namespace hdoc::utils {
 
 /// Converts a Markdown file to an HTML string using GitHub's fork of CommonMark.
-struct MarkdownConverter {
+class MarkdownConverter {
+public:
   MarkdownConverter(const std::filesystem::path& mdPath);
+  MarkdownConverter(const std::string& mdContent);
   ~MarkdownConverter();
 
   /// Get the HTML node containing the Markdown contents
   CTML::Node getHTMLNode() const;
+
+  std::string getHTMLString() const { return this->html; }
+
+private:
+  void convertString(const std::string& mdContent);
 
   cmark_parser* markdownParser = nullptr;
   cmark_node*   markdownDoc    = nullptr;
