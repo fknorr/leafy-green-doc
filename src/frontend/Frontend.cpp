@@ -211,6 +211,7 @@ hdoc::frontend::Frontend::Frontend(int argc, char** argv, hdoc::types::Config* c
         spdlog::warn("An ignore directive from .hdoc.toml was malformed, ignoring it.");
         continue;
       }
+      spdlog::info("Ignoring paths containing: {}", s);
       cfg->ignorePaths.emplace_back(s);
     }
   }

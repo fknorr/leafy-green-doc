@@ -1,13 +1,16 @@
 // Copyright 2019-2023 hdoc
 // SPDX-License-Identifier: AGPL-3.0-only
 
+#include <string>
+#include <regex>
+#include <spdlog/spdlog.h>
+#include <spdlog/fmt/fmt.h>
+
 #include "Matchers.hpp"
 #include "MatcherUtils.hpp"
 #include "types/Symbols.hpp"
 #include "clang/AST/Comment.h"
 #include "clang/Lex/Lexer.h"
-
-#include <string>
 
 /// @brief Try to get a SymbolID from a QualType, and return an empty SymbolID if it's not possible
 static hdoc::types::SymbolID getTypeSymbolID(const clang::QualType& typ) {
@@ -141,6 +144,55 @@ void hdoc::indexer::matchers::FunctionMatcher::run(const clang::ast_matchers::Ma
   this->index->functions.update(f.ID, f);
 }
 
+std::vector<std::string> templateArgsToStrings(const clang::TemplateArgumentList& args, const clang::ASTContext& ctx, const hdoc::types::RecordSymbol& record) {
+  std::vector<std::string> ret;
+  char fallbackName = 'T';
+  for (const auto& arg : args.asArray()) {
+    std::string result;
+    llvm::raw_string_ostream stream(result);
+    clang::PrintingPolicy pp(ctx.getLangOpts());
+    arg.print(pp, stream, true);
+    stream.flush();
+
+    // Special case handling for template type parameter types, if we don't have a good name we go on a journey to find one
+    if(result.starts_with("type-parameter-")) {
+      std::string replacement = "";
+      if (arg.getKind() == clang::TemplateArgument::ArgKind::Type) {
+        auto qt = arg.getAsType();
+        if (const auto* templateType = llvm::dyn_cast<clang::TemplateTypeParmType>(qt->getUnqualifiedDesugaredType())) {
+          if(auto id = templateType->getIdentifier()) {
+            replacement = id->getName().str();
+          } else if(auto decl = templateType->getDecl()) {
+            replacement = decl->getNameAsString();
+          }
+          // If we still don't have anything here, we are dealing with a param which no longer has a name at this point
+          // we try to look up its name in the template params of the record we are currently processing 
+          if(replacement == "") {
+            auto idx = templateType->getIndex();
+            if(idx < record.templateParams.size()) {
+              replacement = record.templateParams[idx].name;
+            }
+          }
+        }
+      }
+      // Final all-else-failed fallback ("T", "U", "V", etc.)
+      if(replacement == "") {
+        replacement = fallbackName++;
+        if (fallbackName > 'Z') {
+          fallbackName = 'A';
+        }
+      }
+      ret.emplace_back(replacement);
+    } else {
+      // We also potentially have template arguments for a template template type, which we just remove for readability
+      std::regex re("<.*>");
+      result = std::regex_replace(result, re, "<...>");
+      ret.emplace_back(result);
+    }
+  }
+  return ret;
+}
+
 void hdoc::indexer::matchers::RecordMatcher::run(const clang::ast_matchers::MatchFinder::MatchResult& Result) {
   const auto res = Result.Nodes.getNodeAs<clang::CXXRecordDecl>("record");
 
@@ -234,8 +286,11 @@ void hdoc::indexer::matchers::RecordMatcher::run(const clang::ast_matchers::Matc
 
   // Get full declaration including templates
   clang::PrintingPolicy pp(res->getASTContext().getLangOpts());
-  if (const auto* templateDecl = res->getDescribedClassTemplate()) {
-    for (const auto* paramDecl : *templateDecl->getTemplateParameters()) {
+  // Rather than dealing independently with ClassTemplateDecl and ClassTemplatePartialSpecializationDecl,
+  // we can ask the generic Decl for the "described Template Params", which is exactly what we want
+  const auto* describedTemplateParms = res->getDescribedTemplateParams();
+  if (describedTemplateParms) {
+    for (const auto* paramDecl : describedTemplateParms->asArray()) {
       hdoc::types::TemplateParam tparam;
       if (const auto& templateType = llvm::dyn_cast<clang::TemplateTypeParmDecl>(paramDecl)) {
         tparam.templateType    = hdoc::types::TemplateParam::TemplateType::TemplateTypeParameter;
@@ -260,10 +315,18 @@ void hdoc::indexer::matchers::RecordMatcher::run(const clang::ast_matchers::Matc
                                         res->getASTContext().getSourceManager(),
                                         res->getASTContext().getLangOpts());
         tparam.name            = templateTemplateType->getNameAsString();
-        tparam.isParameterPack = templateTemplateType->isParameterPack() ? "..." : "";
+        tparam.isParameterPack = templateTemplateType->isParameterPack() ? "..." : ""; // What? TODO: investigate
       }
       c.templateParams.emplace_back(tparam);
     }
+  }
+
+  // For template specializations, include the template arguments in the name
+  // We do this after the template handling above, so we can re-use the TemplateTypeParm names 
+  // stored for c for those template arguments which were *not* specialized and are represented
+  // as canonical ("type-parameter-*") in the template argument list
+  if (const auto* spec = llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(res)) {
+    c.name += fmt::format("<{}>", fmt::join(templateArgsToStrings(spec->getTemplateArgs(), res->getASTContext(), c), ", "));
   }
 
   c.proto = getRecordProto(c);

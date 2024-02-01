@@ -58,7 +58,6 @@ public:
                    clang::ast_matchers::isExpansionInSystemHeader(),
                    clang::ast_matchers::isTemplateInstantiation(),
                    clang::ast_matchers::isInstantiated(),
-                   clang::ast_matchers::isExplicitTemplateSpecialization(),
                    hdoc::indexer::matchers::shouldBeIgnored(this->cfg->ignorePaths, this->cfg->rootDir))))
         .bind("record");
   }
