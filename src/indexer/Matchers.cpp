@@ -50,7 +50,7 @@ void hdoc::indexer::matchers::FunctionMatcher::run(const clang::ast_matchers::Ma
   this->index->functions.numMatches++;
 
   // Ignore invalid matches, matches in ignored files, and static functions
-  if (res == nullptr || res->isOverloadedOperator() ||
+  if (res == nullptr ||
       isInIgnoreList(res, this->cfg->ignorePaths, this->cfg->rootDir) || !res->getSourceRange().isValid() ||
       (res->isStatic() && !res->isCXXClassMember()) || isInAnonymousNamespace(res) ||
       (res->getAccess() == clang::AS_private && cfg->ignorePrivateMembers == true)) {
@@ -246,7 +246,7 @@ void hdoc::indexer::matchers::RecordMatcher::run(const clang::ast_matchers::Matc
 
   // Get methods and decls (what's the difference?) for this record
   for (const auto* m : res->methods()) {
-    if (m == nullptr || m->isImplicit() || m->isOverloadedOperator() ||
+    if (m == nullptr || m->isImplicit() ||
         isInIgnoreList(m, this->cfg->ignorePaths, this->cfg->rootDir) || isInAnonymousNamespace(m) ||
         (m->getAccess() == clang::AS_private && cfg->ignorePrivateMembers == true)) {
       continue;
@@ -255,7 +255,7 @@ void hdoc::indexer::matchers::RecordMatcher::run(const clang::ast_matchers::Matc
   }
   for (const auto* d : res->decls()) {
     if (const auto* ftd = llvm::dyn_cast<clang::FunctionTemplateDecl>(d)) {
-      if (ftd == nullptr || ftd->isImplicit() || ftd->getAsFunction()->isOverloadedOperator() ||
+      if (ftd == nullptr || ftd->isImplicit() ||
           isInIgnoreList(ftd, this->cfg->ignorePaths, this->cfg->rootDir) || isInAnonymousNamespace(ftd) ||
           (ftd->getAccess() == clang::AS_private && cfg->ignorePrivateMembers == true)) {
         continue;

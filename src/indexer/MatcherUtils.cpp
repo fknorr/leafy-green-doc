@@ -83,14 +83,7 @@ void findParentNamespace(hdoc::types::Symbol& s, const clang::NamedDecl* d) {
   if (const auto* n = llvm::dyn_cast<clang::NamespaceDecl>(dc)) {
     s.parentNamespaceID = buildID(n);
   } else if (const auto* n = llvm::dyn_cast<clang::RecordDecl>(dc)) {
-    // If the parent RecordDecl is a specialization, we need to "unspecialize" it
-    // to get the original type. Otherwise clang will return a different SymbolID
-    // and the parentNamespaceID will be a dangling reference.
-    if (const auto* nonspec = getNonSpecializedVersionOfDecl((clang::TagDecl*)n)) {
-      s.parentNamespaceID = buildID(nonspec);
-    } else {
-      s.parentNamespaceID = buildID(n);
-    }
+    s.parentNamespaceID = buildID(n);
   }
 }
 
