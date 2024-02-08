@@ -217,7 +217,7 @@ std::string getFunctionSignature(hdoc::types::FunctionSymbol& f) {
   signature += f.isConsteval ? "consteval " : "";
 
   // Return type
-  if (f.isCtorOrDtor == false) {
+  if (f.isCtorOrDtor == false && f.isConversionOp == false) {
     signature += f.hasTrailingReturn ? "auto " : f.returnType.name + " ";
   }
 

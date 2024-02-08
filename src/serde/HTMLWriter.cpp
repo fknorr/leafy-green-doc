@@ -480,9 +480,9 @@ static void printFunction(const hdoc::types::FunctionSymbol& f,
 
   main.AddChild(getDeclaredAtNode(f, gitRepoURL, gitDefaultBranch));
 
-  // Print function parameters (with type, name, default value, and comment) as a list
+  // Print function template parameters (with type, name, default value, and comment) as a list
   if (f.templateParams.size() > 0) {
-    main.AddChild(CTML::Node("h4", "Templates"));
+    main.AddChild(CTML::Node("h4", "Template Parameters"));
     CTML::Node dl("dl");
 
     for (auto tparam : f.templateParams) {
@@ -796,9 +796,9 @@ void hdoc::serde::HTMLWriter::printRecord(const hdoc::types::RecordSymbol& c) co
     main.AddChild(baseP);
   }
 
-  // Print function parameters (with type, name, default value, and comment) as a list
+  // Print template parameters (with type, name, default value, and comment) as a list
   if (c.templateParams.size() > 0) {
-    main.AddChild(CTML::Node("h2", "Templates"));
+    main.AddChild(CTML::Node("h2", "Template Parameters"));
     CTML::Node dl("dl");
 
     for (auto tparam : c.templateParams) {

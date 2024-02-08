@@ -46,6 +46,13 @@ static hdoc::types::SymbolID getTypeSymbolID(const clang::QualType& typ) {
 void hdoc::indexer::matchers::FunctionMatcher::run(const clang::ast_matchers::MatchFinder::MatchResult& Result) {
   const auto res = Result.Nodes.getNodeAs<clang::FunctionDecl>("function");
 
+  // Ignore deduction guides, at least for now
+  // (generally, these usually are designed to make things work as one would expect, so
+  //  having documentation for them is not as important as for other things)
+  if(llvm::isa<clang::CXXDeductionGuideDecl>(res)) {
+    return;
+  }
+
   // Count the number of functions matched
   this->index->functions.numMatches++;
 
@@ -65,6 +72,9 @@ void hdoc::indexer::matchers::FunctionMatcher::run(const clang::ast_matchers::Ma
   hdoc::types::FunctionSymbol f;
   f.ID = ID;
   fillOutSymbol(f, res, this->cfg->rootDir);
+
+  // Determine if the function is a conversion operator early, since it influences proto generation
+  f.isConversionOp = llvm::isa<clang::CXXConversionDecl>(res);
 
   // Get a bunch of qualifiers
   f.isVariadic   = res->isVariadic();

@@ -150,7 +150,8 @@ public:
   bool                       isVariadic        = false; ///< Does it have a "..." parameter?
   bool                       isNoExcept        = false; ///< Is it marked noexcept?
   bool                       hasTrailingReturn = false; ///< Does use the funky `auto func() -> int {}` syntax?
-  bool                       isCtorOrDtor      = false; ///< Is it a record constructor or destructor
+  bool                       isCtorOrDtor      = false; ///< Is it a record constructor or destructor?
+  bool                       isConversionOp    = false; ///< Is it a conversion operator?
   uint64_t                   nameStart         = 0;     ///< Position of the first character of the name
   uint64_t                   postTemplate      = 0; ///< Position of the first character after all the template magic
   clang::AccessSpecifier     access            = clang::AS_public; ///< Is the function public/protected/private
