@@ -50,5 +50,6 @@ struct Index {
   Database<hdoc::types::RecordSymbol>    records;
   Database<hdoc::types::EnumSymbol>      enums;
   Database<hdoc::types::NamespaceSymbol> namespaces;
+  Database<hdoc::types::AliasSymbol>     aliases;
 };
 } // namespace hdoc::types

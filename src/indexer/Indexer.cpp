@@ -35,11 +35,13 @@ void hdoc::indexer::Indexer::run() {
   hdoc::indexer::matchers::RecordMatcher    RecordFinder(&this->index, this->cfg);
   hdoc::indexer::matchers::EnumMatcher      EnumFinder(&this->index, this->cfg);
   hdoc::indexer::matchers::NamespaceMatcher NamespaceFinder(&this->index, this->cfg);
+  hdoc::indexer::matchers::UsingMatcher     UsingFinder(&this->index, this->cfg);
   clang::ast_matchers::MatchFinder          Finder;
   Finder.addMatcher(FunctionFinder.getMatcher(), &FunctionFinder);
   Finder.addMatcher(RecordFinder.getMatcher(), &RecordFinder);
   Finder.addMatcher(EnumFinder.getMatcher(), &EnumFinder);
   Finder.addMatcher(NamespaceFinder.getMatcher(), &NamespaceFinder);
+  Finder.addMatcher(UsingFinder.getMatcher(), &UsingFinder);
 
   // Add include search paths to clang invocation
   std::vector<std::string> includePaths = {};
@@ -74,6 +76,11 @@ void hdoc::indexer::Indexer::resolveNamespaces() {
     for (const auto& [k, v] : this->index.namespaces.entries) {
       if (isChild(ns, v)) {
         ns.namespaces.emplace_back(v.ID);
+      }
+    }
+    for (const auto& [k, v] : this->index.aliases.entries) {
+      if (isChild(ns, v)) {
+        ns.usings.emplace_back(v.ID);
       }
     }
   }
@@ -116,28 +123,20 @@ void hdoc::indexer::Indexer::updateRecordNames() {
 }
 
 void hdoc::indexer::Indexer::printStats() const {
-  // Size of databases in KiB
-  const auto functionIndexSize  = this->index.functions.entries.size() * sizeof(hdoc::types::FunctionSymbol) / 1024;
-  const auto recordIndexSize    = this->index.records.entries.size() * sizeof(hdoc::types::RecordSymbol) / 1024;
-  const auto enumIndexSize      = this->index.enums.entries.size() * sizeof(hdoc::types::EnumMember) / 1024;
-  const auto namespaceIndexSize = this->index.namespaces.entries.size() * sizeof(hdoc::types::NamespaceSymbol) / 1024;
 
-  spdlog::info("Functions:  {} matches, {} indexed, {} KiB total size",
-               this->index.functions.numMatches,
-               this->index.functions.entries.size(),
-               functionIndexSize);
-  spdlog::info("Records:    {} matches, {} indexed, {} KiB total size",
-               this->index.records.numMatches,
-               this->index.records.entries.size(),
-               recordIndexSize);
-  spdlog::info("Enums:      {} matches, {} indexed, {} KiB total size",
-               this->index.enums.numMatches,
-               this->index.enums.entries.size(),
-               enumIndexSize);
-  spdlog::info("Namespaces: {} matches, {} indexed, {} KiB total size",
-               this->index.namespaces.numMatches,
-               this->index.namespaces.entries.size(),
-               namespaceIndexSize);
+  const auto printDatabaseSize = []<typename T>(const char* name, const types::Database<T>& db) {
+    spdlog::info("{:12}: {:8} matches, {:6} indexed, {:6} KiB total size",
+                 name,
+                 db.numMatches,
+                 db.entries.size(),
+                 db.entries.size() * sizeof(T) / 1024);
+  };
+
+  printDatabaseSize("Functions", this->index.functions);
+  printDatabaseSize("Records", this->index.records);
+  printDatabaseSize("Enums", this->index.enums);
+  printDatabaseSize("Namespaces", this->index.namespaces);
+  printDatabaseSize("Usings", this->index.aliases);
 }
 
 void hdoc::indexer::Indexer::pruneMethods() {
@@ -157,13 +156,17 @@ void hdoc::indexer::Indexer::pruneMethods() {
 }
 
 void hdoc::indexer::Indexer::pruneTypeRefs() {
+  auto haveId = [&](const hdoc::types::SymbolID& id) {
+    return this->index.records.contains(id) || this->index.enums.contains(id) || this->index.aliases.contains(id);
+  };
+
   for (auto& [k, v] : this->index.functions.entries) {
-    if (this->index.records.contains(v.returnType.id) == false) {
+    if (haveId(v.returnType.id) == false) {
       v.returnType.id = hdoc::types::SymbolID();
     }
 
     for (auto& param : v.params) {
-      if (this->index.records.contains(param.type.id) == false) {
+      if (haveId(param.type.id) == false) {
         param.type.id = hdoc::types::SymbolID();
       }
     }
@@ -171,9 +174,15 @@ void hdoc::indexer::Indexer::pruneTypeRefs() {
 
   for (auto& [k, v] : this->index.records.entries) {
     for (auto& var : v.vars) {
-      if (this->index.records.contains(var.type.id) == false) {
+      if (haveId(var.type.id) == false) {
         var.type.id = hdoc::types::SymbolID();
       }
+    }
+  }
+
+  for (auto& [k, v] : this->index.aliases.entries) {
+    if (haveId(v.target.id) == false) {
+      v.target.id = hdoc::types::SymbolID();
     }
   }
 }

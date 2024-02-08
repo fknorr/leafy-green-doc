@@ -106,6 +106,16 @@ hdoc::serde::HTMLWriter::HTMLWriter(const hdoc::types::Index*  index,
   }
 }
 
+std::string escapeForHTML(const std::string& in) {
+  std::string str = in;
+  str = hdoc::utils::replaceAll(str, "&", "&amp;");
+  str = hdoc::utils::replaceAll(str, "<", "&lt;");
+  str = hdoc::utils::replaceAll(str, ">", "&gt;");
+  str = hdoc::utils::replaceAll(str, "\"", "&quot;");
+  str = hdoc::utils::replaceAll(str, "'", "&apos;");
+  return str;
+}
+
 /// Create a new HTML page with standard structure
 /// Optional sidebar, CSS styling, favicons, footer, etc.
 static void printNewPage(const hdoc::types::Config&   cfg,
@@ -193,6 +203,7 @@ static void printNewPage(const hdoc::types::Config&   cfg,
   menuUL.AddChild(CTML::Node("p.menu-label", "API Documentation"));
   menuUL.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Functions").SetAttr("href", "functions.html")));
   menuUL.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Records").SetAttr("href", "records.html")));
+  menuUL.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Aliases").SetAttr("href", "aliases.html")));
   menuUL.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Enums").SetAttr("href", "enums.html")));
   menuUL.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Namespaces").SetAttr("href", "namespaces.html")));
   aside.AddChild(menuUL);
@@ -288,12 +299,7 @@ std::string hdoc::serde::getHyperlinkedFunctionProto(const std::string_view     
                                                      const hdoc::types::FunctionSymbol& f) {
   std::string str = std::string(proto);
 
-  // Replace all of the html-sensitive characters with
-  str = hdoc::utils::replaceAll(str, "&", "&amp;");
-  str = hdoc::utils::replaceAll(str, "<", "&lt;");
-  str = hdoc::utils::replaceAll(str, ">", "&gt;");
-  str = hdoc::utils::replaceAll(str, "\"", "&quot;");
-  str = hdoc::utils::replaceAll(str, "'", "&apos;");
+  str = escapeForHTML(str);
 
   std::size_t index              = 0;
   std::string bareReturnTypeName = getBareTypeName(f.returnType.name);
@@ -337,11 +343,7 @@ static std::string getHyperlinkedTypeName(const hdoc::types::TypeRef& type) {
   std::string bareTypeName = hdoc::serde::getBareTypeName(fullTypeName);
 
   fullTypeName = hdoc::serde::clangFormat(fullTypeName);
-  fullTypeName = hdoc::utils::replaceAll(fullTypeName, "&", "&amp;");
-  fullTypeName = hdoc::utils::replaceAll(fullTypeName, "<", "&lt;");
-  fullTypeName = hdoc::utils::replaceAll(fullTypeName, ">", "&gt;");
-  fullTypeName = hdoc::utils::replaceAll(fullTypeName, "\"", "&quot;");
-  fullTypeName = hdoc::utils::replaceAll(fullTypeName, "'", "&apos;");
+  fullTypeName = escapeForHTML(fullTypeName);
 
   if (type.id.raw() == 0) {
     // If it's a std:: type, then try to link to its cppreference page.
@@ -564,6 +566,81 @@ void hdoc::serde::HTMLWriter::printFunctions() const {
   }
   printNewPage(
       *this->cfg, main, this->cfg->outputDir / "functions.html", "Functions: " + this->cfg->getPageTitleSuffix());
+}
+
+
+/// Print an alias to main
+static void printAlias(const hdoc::types::AliasSymbol& a,
+                       CTML::Node&                     main,
+                       const std::string_view          gitRepoURL,
+                       const std::string_view          gitDefaultBranch) {
+  // Print using
+  std::string str = "using " + a.name + " = " + a.target.name;
+  str = hdoc::serde::clangFormat(str);
+  str = escapeForHTML(str);
+  auto        inner = CTML::Node("code.hdoc-function-code.language-cpp").AppendRawHTML(str);
+  main.AddChild(CTML::Node("h3#" + a.ID.str())
+                    .AddChild(CTML::Node("pre.p-0.hdoc-pre-parent")
+                                  .AddChild(CTML::Node("a.is-size-4", "¶")
+                                                .SetAttr("class", "hdoc-permalink-icon")
+                                                .SetAttr("href", "#" + a.ID.str()))
+                                  .AddChild(inner)));
+
+  // Print description only if there's an associated comment
+  if (a.briefComment != "" || a.docComment != "") {
+    main.AddChild(CTML::Node("h4", "Description"));
+  }
+  appendAsMarkdown(a.briefComment, main);
+  appendAsMarkdown(a.docComment, main);
+
+  main.AddChild(getDeclaredAtNode(a, gitRepoURL, gitDefaultBranch));
+
+  // If we have a symbol, link it
+  if (a.target.id.raw() != 0) {
+    main.AddChild(CTML::Node("h4", "Target"));
+    main.AddChild(CTML::Node("p", "The target of this alias is ").AppendRawHTML(getHyperlinkedTypeName(a.target)));
+  }
+}
+
+/// Print all of the aliases that aren't record members in a project
+void hdoc::serde::HTMLWriter::printAliases() const {
+  CTML::Node main("main");
+  main.AddChild(CTML::Node("h1", "Aliases"));
+
+  // Print a bullet list of usings
+  uint64_t   numUsings = 0; // Number of usings that aren't methods
+  CTML::Node ul("ul");
+  for (const auto& id : getSortedIDs(map2vec(this->index->aliases), this->index->aliases)) {
+    const auto& u = this->index->aliases.entries.at(id);
+    if (u.isRecordMember) {
+      continue;
+    }
+    numUsings += 1;
+    ul.AddChild(CTML::Node("li")
+                    .AddChild(CTML::Node("a.is-family-code", u.name).SetAttr("href", u.url()))
+                    .AppendText(getSymbolBlurb(u)));
+    CTML::Node page("main");
+    this->pool.async(
+        [&](const hdoc::types::AliasSymbol& alias, CTML::Node pg) {
+          printAlias(alias, pg, this->cfg->gitRepoURL, this->cfg->gitDefaultBranch);
+          printNewPage(*this->cfg,
+                       pg,
+                       this->cfg->outputDir / alias.url(),
+                       "alias " + alias.name + ": " + this->cfg->getPageTitleSuffix(),
+                       getBreadcrumbNode("alias", alias, *this->index));
+        },
+        u,
+        page);
+  }
+  this->pool.wait();
+  main.AddChild(CTML::Node("h2", "Overview"));
+  if (numUsings == 0) {
+    main.AddChild(CTML::Node("p", "No namespace-level aliases were declared in this project."));
+  } else {
+    main.AddChild(ul);
+  }
+  printNewPage(
+      *this->cfg, main, this->cfg->outputDir / "aliases.html", "Aliases: " + this->cfg->getPageTitleSuffix());
 }
 
 static std::vector<hdoc::types::RecordSymbol::BaseRecord> getInheritedSymbols(const hdoc::types::Index*        index,
@@ -851,6 +928,7 @@ static CTML::Node printNamespace(const hdoc::types::NamespaceSymbol& ns, const h
   const std::vector<hdoc::types::SymbolID> childNamespaces = getSortedIDs(ns.namespaces, index.namespaces);
   const std::vector<hdoc::types::SymbolID> childRecords    = getSortedIDs(ns.records, index.records);
   const std::vector<hdoc::types::SymbolID> childEnums      = getSortedIDs(ns.enums, index.enums);
+  const std::vector<hdoc::types::SymbolID> childAliases    = getSortedIDs(ns.usings, index.aliases);
 
   for (const auto& childID : childNamespaces) {
     if (index.namespaces.contains(childID == false)) {
@@ -874,6 +952,14 @@ static CTML::Node printNamespace(const hdoc::types::NamespaceSymbol& ns, const h
     const hdoc::types::EnumSymbol s = index.enums.entries.at(childID);
     subUL.AddChild(
         CTML::Node("li.is-family-code").AddChild(CTML::Node("a", s.type + " " + s.name).SetAttr("href", s.url())));
+  }
+  for (const auto& childID : childAliases) {
+    if (index.aliases.contains(childID == false)) {
+      continue;
+    }
+    const hdoc::types::AliasSymbol s = index.aliases.entries.at(childID);
+    subUL.AddChild(
+        CTML::Node("li.is-family-code").AddChild(CTML::Node("a", "using " + s.name).SetAttr("href", s.url())));
   }
   return node.AddChild(subUL);
 }
@@ -1057,6 +1143,7 @@ void hdoc::serde::HTMLWriter::printProjectIndex() const {
     CTML::Node ul("ul");
 
     ul.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Records").SetAttr("href", "records.html")));
+    ul.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Aliases").SetAttr("href", "aliases.html")));
     ul.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Functions").SetAttr("href", "functions.html")));
     ul.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Enums").SetAttr("href", "enums.html")));
     ul.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Namespaces").SetAttr("href", "namespaces.html")));

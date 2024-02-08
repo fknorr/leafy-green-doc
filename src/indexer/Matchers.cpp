@@ -144,6 +144,77 @@ void hdoc::indexer::matchers::FunctionMatcher::run(const clang::ast_matchers::Ma
   this->index->functions.update(f.ID, f);
 }
 
+void hdoc::indexer::matchers::UsingMatcher::run(const clang::ast_matchers::MatchFinder::MatchResult& Result) {
+  const auto res = Result.Nodes.getNodeAs<clang::NamedDecl>("using");
+
+  // Only interested in aliases
+  if(!llvm::isa_and_present<clang::UsingDecl>(res) && !llvm::isa_and_present<clang::UsingShadowDecl>(res) && !llvm::isa_and_present<clang::TypeAliasDecl>(res)) {
+    return;
+  }
+
+  // We don't care about aliases defined locally in a function scope
+  if (res->getDeclContext()->isFunctionOrMethod()) {
+    return;
+  }
+
+  // Count the number of aliases matched
+  this->index->aliases.numMatches++;
+
+  if(isInIgnoreList(res, this->cfg->ignorePaths, this->cfg->rootDir)) spdlog::warn("Ignoring Using [ignore list] : {}", res->getQualifiedNameAsString());
+  if(!res->getSourceRange().isValid()) spdlog::warn("Ignoring Using [invalid source range] : {}", res->getQualifiedNameAsString());
+
+  // Ignore invalid matches and matches in ignored files
+  if (res == nullptr ||
+      isInIgnoreList(res, this->cfg->ignorePaths, this->cfg->rootDir) || !res->getSourceRange().isValid() ||
+      (res->getAccess() == clang::AS_private && cfg->ignorePrivateMembers == true)) {
+    return;
+  }
+
+  const hdoc::types::SymbolID ID = buildID(res);
+  if (this->index->aliases.contains(ID)) {
+    return;
+  }
+  this->index->aliases.reserve(ID);
+
+  hdoc::types::AliasSymbol a;
+  a.ID = ID;
+  fillOutSymbol(a, res, this->cfg->rootDir);
+
+  a.isRecordMember = res->isCXXClassMember();
+
+  spdlog::debug(" ------------- ");
+  spdlog::debug("Using: {}", res->getQualifiedNameAsString());
+  if(auto usingDecl = llvm::dyn_cast<clang::UsingDecl>(res)) {
+    for(auto shadow : usingDecl->shadows()) {
+      spdlog::debug(" + Shadow: {}", shadow->getUnderlyingDecl()->getQualifiedNameAsString());
+      // currently, we just store the *last* shadow, which is the most derived one
+      a.target.id = buildID(shadow->getUnderlyingDecl());
+      a.target.name = shadow->getUnderlyingDecl()->getQualifiedNameAsString();
+    }
+  } else if(auto usingShadowDecl = llvm::dyn_cast<clang::UsingShadowDecl>(res)) {
+    spdlog::debug(" + Target: {}", usingShadowDecl->getTargetDecl()->getQualifiedNameAsString());
+    a.target.id = buildID(usingShadowDecl->getTargetDecl());
+    a.target.name = usingShadowDecl->getTargetDecl()->getQualifiedNameAsString();
+  } else if(auto typeAliasDecl = llvm::dyn_cast<clang::TypeAliasDecl>(res)) {
+    std::string result;
+    llvm::raw_string_ostream stream(result);
+    clang::PrintingPolicy pp(res->getASTContext().getLangOpts());
+    typeAliasDecl->getUnderlyingType().print(stream, pp);
+    stream.flush();
+    spdlog::debug(" + Underlying: {}", result);
+    a.target.id = getTypeSymbolID(typeAliasDecl->getUnderlyingType());
+    a.target.name = result;
+  }
+
+  const clang::comments::Comment* comment = res->getASTContext().getCommentForDecl(res, nullptr);
+  if (comment != nullptr) {
+    processSymbolComment(a, comment, res->getASTContext());
+  }
+
+  findParentNamespace(a, res);
+  this->index->aliases.update(a.ID, a);
+}
+
 std::vector<std::string> templateArgsToStrings(const clang::TemplateArgumentList& args, const clang::ASTContext& ctx, const hdoc::types::RecordSymbol& record) {
   std::vector<std::string> ret;
   char fallbackName = 'T';

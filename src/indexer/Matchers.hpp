@@ -54,7 +54,6 @@ public:
                    clang::ast_matchers::hasAncestor(
                        clang::ast_matchers::namespaceDecl(clang::ast_matchers::isAnonymous())),
                    clang::ast_matchers::isImplicit(),
-                   clang::ast_matchers::isInStdNamespace(),
                    clang::ast_matchers::isExpansionInSystemHeader(),
                    clang::ast_matchers::isTemplateInstantiation(),
                    clang::ast_matchers::isInstantiated(),
@@ -76,12 +75,31 @@ public:
                    clang::ast_matchers::hasAncestor(
                        clang::ast_matchers::namespaceDecl(clang::ast_matchers::isAnonymous())),
                    clang::ast_matchers::isImplicit(),
-                   clang::ast_matchers::isInStdNamespace(),
                    clang::ast_matchers::isExpansionInSystemHeader(),
                    clang::ast_matchers::isTemplateInstantiation(),
                    clang::ast_matchers::isInstantiated(),
                    hdoc::indexer::matchers::shouldBeIgnored(this->cfg->ignorePaths, this->cfg->rootDir))))
         .bind("function");
+  }
+};
+
+class UsingMatcher : public clang::ast_matchers::MatchFinder::MatchCallback {
+public:
+  virtual void run(const clang::ast_matchers::MatchFinder::MatchResult& Result);
+  UsingMatcher(hdoc::types::Index* index, const hdoc::types::Config* cfg) : index(index), cfg(cfg) {}
+  hdoc::types::Index*        index;
+  const hdoc::types::Config* cfg;
+
+  clang::ast_matchers::DeclarationMatcher getMatcher() {
+    return clang::ast_matchers::namedDecl(
+               clang::ast_matchers::unless(clang::ast_matchers::anyOf(
+                   clang::ast_matchers::hasAncestor(
+                       clang::ast_matchers::namespaceDecl(clang::ast_matchers::isAnonymous())),
+                   clang::ast_matchers::isImplicit(),
+                   clang::ast_matchers::isExpansionInSystemHeader(),
+                   clang::ast_matchers::isInstantiated(),
+                   hdoc::indexer::matchers::shouldBeIgnored(this->cfg->ignorePaths, this->cfg->rootDir))))
+        .bind("using");
   }
 };
 
@@ -97,8 +115,6 @@ public:
                clang::ast_matchers::unless(clang::ast_matchers::anyOf(
                    clang::ast_matchers::hasAncestor(
                        clang::ast_matchers::namespaceDecl(clang::ast_matchers::isAnonymous())),
-
-                   clang::ast_matchers::isInStdNamespace(),
                    clang::ast_matchers::isExpansionInSystemHeader(),
                    clang::ast_matchers::isImplicit(),
                    hdoc::indexer::matchers::shouldBeIgnored(this->cfg->ignorePaths, this->cfg->rootDir))))
@@ -117,7 +133,6 @@ public:
                clang::ast_matchers::unless(clang::ast_matchers::anyOf(
                    clang::ast_matchers::hasAncestor(
                        clang::ast_matchers::namespaceDecl(clang::ast_matchers::isAnonymous())),
-                   clang::ast_matchers::isInStdNamespace(),
                    clang::ast_matchers::isExpansionInSystemHeader(),
                    clang::ast_matchers::isImplicit(),
                    hdoc::indexer::matchers::shouldBeIgnored(this->cfg->ignorePaths, this->cfg->rootDir))))

@@ -191,9 +191,21 @@ public:
   std::vector<hdoc::types::SymbolID> records    = {}; ///< All of the records in this namespace
   std::vector<hdoc::types::SymbolID> namespaces = {}; ///< All of the other namespaces in this namespace
   std::vector<hdoc::types::SymbolID> enums      = {}; ///< All of the enums in this namespace
+  std::vector<hdoc::types::SymbolID> usings     = {}; ///< All of the usings in this namespace
 
   std::string url() const {
     return "n" + this->ID.str() + ".html";
+  }
+};
+
+/// @brief Represents a using declaration or similar alias
+struct AliasSymbol : public Symbol {
+public:
+  TypeRef target; ///< The type this using declaration aliases
+  bool isRecordMember = false; ///< Is it a member alias?
+
+  std::string url() const {
+    return "a" + this->ID.str() + ".html";
   }
 };
 

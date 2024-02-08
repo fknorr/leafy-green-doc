@@ -16,6 +16,7 @@ class HTMLWriter {
 public:
   HTMLWriter(const hdoc::types::Index* index, const hdoc::types::Config* cfg, llvm::ThreadPool& pool);
   void printFunctions() const;
+  void printAliases() const;
   void printRecords() const;
   void printRecord(const hdoc::types::RecordSymbol& c) const;
   void printNamespaces() const;

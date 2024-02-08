@@ -36,6 +36,7 @@ int main(int argc, char** argv) {
 
   hdoc::serde::HTMLWriter htmlWriter(index, &cfg, pool);
   htmlWriter.printFunctions();
+  htmlWriter.printAliases();
   htmlWriter.printRecords();
   htmlWriter.printNamespaces();
   htmlWriter.printEnums();

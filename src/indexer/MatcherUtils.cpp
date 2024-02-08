@@ -403,3 +403,6 @@ template void processSymbolComment<hdoc::types::EnumSymbol>(hdoc::types::EnumSym
 template void processSymbolComment<hdoc::types::RecordSymbol>(hdoc::types::RecordSymbol&      sym,
                                                               const clang::comments::Comment* comment,
                                                               clang::ASTContext&              ctx);
+template void processSymbolComment<hdoc::types::AliasSymbol>(hdoc::types::AliasSymbol&       sym,
+                                                             const clang::comments::Comment* comment,
+                                                             clang::ASTContext&              ctx);
