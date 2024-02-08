@@ -23,7 +23,8 @@
 /// VFS-aware way.
 static std::optional<std::string> getCanonicalPath(const clang::Decl* d) {
   const auto& sourceManager = d->getASTContext().getSourceManager();
-  const auto* fileEntry     = sourceManager.getFileEntryForID(sourceManager.getFileID(d->getLocation()));
+  const auto fileLoc = d->getASTContext().getSourceManager().getFileLoc(d->getLocation()); // Resolves macro locations
+  const auto* fileEntry = sourceManager.getFileEntryForID(sourceManager.getFileID(fileLoc));
 
   if (!fileEntry) {
     return std::nullopt;
@@ -90,10 +91,14 @@ void findParentNamespace(hdoc::types::Symbol& s, const clang::NamedDecl* d) {
 bool isInIgnoreList(const clang::Decl*              d,
                     const std::vector<std::string>& ignorePaths,
                     const std::filesystem::path&    rootDir) {
-  const auto rawPath = std::filesystem::path(d->getASTContext().getSourceManager().getFilename(d->getLocation()).str());
+
+
+  const auto fileLoc = d->getASTContext().getSourceManager().getFileLoc(d->getLocation()); // Resolves macro locations
+  const auto rawPath = std::filesystem::path(d->getASTContext().getSourceManager().getFilename(fileLoc).str());
 
   // If the decl has an empty path, it's probably compiler-generated so we ignore it
   if (rawPath == "") {
+    spdlog::warn("Empty path, ignoring decl");
     return true;
   }
 
