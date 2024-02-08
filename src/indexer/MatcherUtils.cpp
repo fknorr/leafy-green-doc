@@ -80,10 +80,10 @@ const clang::ClassTemplateDecl* getNonSpecializedVersionOfDecl(const clang::TagD
 }
 
 void findParentNamespace(hdoc::types::Symbol& s, const clang::NamedDecl* d) {
-  const auto* dc = llvm::dyn_cast<clang::DeclContext>(d)->getParent();
-  if (const auto* n = llvm::dyn_cast<clang::NamespaceDecl>(dc)) {
+  const auto* dc = d->getLexicalDeclContext();
+  if (const auto* n = llvm::dyn_cast_or_null<clang::NamespaceDecl>(dc)) {
     s.parentNamespaceID = buildID(n);
-  } else if (const auto* n = llvm::dyn_cast<clang::RecordDecl>(dc)) {
+  } else if (const auto* n = llvm::dyn_cast_or_null<clang::RecordDecl>(dc)) {
     s.parentNamespaceID = buildID(n);
   }
 }
@@ -91,7 +91,6 @@ void findParentNamespace(hdoc::types::Symbol& s, const clang::NamedDecl* d) {
 bool isInIgnoreList(const clang::Decl*              d,
                     const std::vector<std::string>& ignorePaths,
                     const std::filesystem::path&    rootDir) {
-
 
   const auto fileLoc = d->getASTContext().getSourceManager().getFileLoc(d->getLocation()); // Resolves macro locations
   const auto rawPath = std::filesystem::path(d->getASTContext().getSourceManager().getFilename(fileLoc).str());
