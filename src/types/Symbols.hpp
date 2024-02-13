@@ -97,6 +97,18 @@ struct TemplateParam {
   bool        isTypename      = false; ///< Was this template declared with "typename" or "class"?
 };
 
+/// @brief Represents a using declaration or similar alias
+struct AliasSymbol : public Symbol {
+public:
+  TypeRef target;                                    ///< The type this using declaration aliases
+  bool isRecordMember = false;                       ///< Is it a member alias?
+  clang::AccessSpecifier access = clang::AS_private; ///< Access type, i.e. public/protected/private
+
+  std::string url() const {
+    return "a" + this->ID.str() + ".html";
+  }
+};
+
 /// @brief Represents a member variable of a record
 struct MemberVariable {
   bool                   isStatic = false;           ///< Is this member variable marked static?
@@ -122,6 +134,7 @@ struct RecordSymbol : public Symbol {
   std::vector<hdoc::types::SymbolID> methodIDs;      ///< All of this record's methods
   std::vector<BaseRecord>            baseRecords;    ///< All of the records this record inherits from
   std::vector<TemplateParam>         templateParams; ///< All of the template parameters for this record
+  std::vector<hdoc::types::SymbolID> aliasIDs;       ///< All of the aliases in this record
 
   std::string url() const {
     return "r" + this->ID.str() + ".html";
@@ -196,17 +209,6 @@ public:
 
   std::string url() const {
     return "n" + this->ID.str() + ".html";
-  }
-};
-
-/// @brief Represents a using declaration or similar alias
-struct AliasSymbol : public Symbol {
-public:
-  TypeRef target; ///< The type this using declaration aliases
-  bool isRecordMember = false; ///< Is it a member alias?
-
-  std::string url() const {
-    return "a" + this->ID.str() + ".html";
   }
 };
 

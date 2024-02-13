@@ -570,17 +570,19 @@ void hdoc::serde::HTMLWriter::printFunctions() const {
       *this->cfg, main, this->cfg->outputDir / "functions.html", "Functions: " + this->cfg->getPageTitleSuffix());
 }
 
+static std::string getAliasHTML(const hdoc::types::AliasSymbol& a) {
+  std::string str = "using " + a.name + " = " + a.target.name;
+  str = hdoc::serde::clangFormat(str);
+  str = escapeForHTML(str);
+  return str;
+}
 
 /// Print an alias to main
 static void printAlias(const hdoc::types::AliasSymbol& a,
                        CTML::Node&                     main,
                        const std::string_view          gitRepoURL,
                        const std::string_view          gitDefaultBranch) {
-  // Print using
-  std::string str = "using " + a.name + " = " + a.target.name;
-  str = hdoc::serde::clangFormat(str);
-  str = escapeForHTML(str);
-  auto        inner = CTML::Node("code.hdoc-function-code.language-cpp").AppendRawHTML(str);
+  auto        inner = CTML::Node("code.hdoc-function-code.language-cpp").AppendRawHTML(getAliasHTML(a));
   main.AddChild(CTML::Node("h3#" + a.ID.str())
                     .AddChild(CTML::Node("pre.p-0.hdoc-pre-parent")
                                   .AddChild(CTML::Node("a.is-size-4", "¶")
@@ -836,6 +838,19 @@ void hdoc::serde::HTMLWriter::printRecord(const hdoc::types::RecordSymbol& c) co
       hasMemberVariableHeading = true;
     }
     printMemberVariables(ic, main, true);
+  }
+
+  // Print type aliases
+  if(c.aliasIDs.size() > 0) {
+    main.AddChild(CTML::Node("h2", "Member Aliases"));
+    CTML::Node ul("ul");
+    for (const auto& aliasID : getSortedIDs(c.aliasIDs, this->index->aliases)) {
+      const auto& a = this->index->aliases.entries.at(aliasID);
+      auto li = CTML::Node("li.is-family-code").AppendRawHTML(getAliasHTML(a));
+      if(a.access == clang::AS_private) li.ToggleClass("hdoc-private");
+      ul.AddChild(li);
+    }
+    main.AddChild(ul);
   }
 
   // Method overview in list form

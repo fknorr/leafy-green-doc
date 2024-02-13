@@ -194,6 +194,7 @@ void hdoc::indexer::matchers::UsingMatcher::run(const clang::ast_matchers::Match
   fillOutSymbol(a, res, this->cfg->rootDir);
 
   a.isRecordMember = res->isCXXClassMember();
+  if(a.isRecordMember) a.access = res->getAccess();
 
   spdlog::debug(" ------------- ");
   spdlog::debug("Using: {}", res->getQualifiedNameAsString());
@@ -345,6 +346,18 @@ void hdoc::indexer::matchers::RecordMatcher::run(const clang::ast_matchers::Matc
         continue;
       }
       c.methodIDs.emplace_back(buildID(ftd));
+    } else {
+      // add aliases
+      const clang::NamedDecl* alias = llvm::dyn_cast<clang::UsingShadowDecl>(d);
+      if (!alias) alias = llvm::dyn_cast<clang::UsingDecl>(d);
+      if (!alias) alias = llvm::dyn_cast<clang::TypeAliasDecl>(d);
+      if (alias == nullptr || alias->isImplicit() ||
+          isInIgnoreList(alias, this->cfg->ignorePaths, this->cfg->rootDir) || isInAnonymousNamespace(alias) ||
+          (alias->getAccess() == clang::AS_private && cfg->ignorePrivateMembers == true)) {
+        continue;
+      }
+      c.aliasIDs.emplace_back(buildID(alias));
+      spdlog::debug("Added member alias: {}", alias->getQualifiedNameAsString());
     }
   }
 
