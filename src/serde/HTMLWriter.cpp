@@ -525,6 +525,8 @@ static void printFunction(const hdoc::types::FunctionSymbol& f,
     main.AddChild(CTML::Node("h4", "Returns"));
     main.AddChild(CTML::Node("p", f.returnTypeDocComment));
   }
+
+  main.AddChild(CTML::Node("hr.member-fun-separator"));
 }
 
 /// Print all of the functions that aren't record members in a project
@@ -688,8 +690,7 @@ static void printMemberVariables(const hdoc::types::RecordSymbol& c, CTML::Node&
       continue;
     }
 
-    std::string preamble = to_string(var.access);
-    preamble += var.isStatic ? " static " : " ";
+    std::string preamble = var.isStatic ? " static " : " ";
 
     CTML::Node dt;
     // Print the access, type, name, and doc comment if it exists
@@ -709,6 +710,8 @@ static void printMemberVariables(const hdoc::types::RecordSymbol& c, CTML::Node&
     if (var.defaultValue != "") {
       dt.AppendText(" = " + var.defaultValue);
     }
+
+    if(var.access == clang::AS_private) dt.ToggleClass("hdoc-private");
 
     dl.AddChild(dt);
 
@@ -839,7 +842,7 @@ void hdoc::serde::HTMLWriter::printRecord(const hdoc::types::RecordSymbol& c) co
   const auto& sortedMethodIDs          = getSortedIDs(c.methodIDs, this->index->functions);
   bool        hasMethodOverviewHeading = false;
   if (sortedMethodIDs.size() > 0) {
-    main.AddChild(CTML::Node("h2", "Method Overview"));
+    main.AddChild(CTML::Node("h2", "Member Function Overview"));
     hasMethodOverviewHeading = true;
     CTML::Node ul("ul");
     for (auto methodID : sortedMethodIDs) {
@@ -847,12 +850,16 @@ void hdoc::serde::HTMLWriter::printRecord(const hdoc::types::RecordSymbol& c) co
 
       // Divide up the full function declaration so its name can be bold in the HTML
       const uint64_t    nameLen  = m.name.size();
-      const std::string preName  = to_string(m.access) + " " + m.proto.substr(0, m.nameStart) + " ";
+      const std::string templatePart = m.proto.substr(0, m.postTemplate);
+      const std::string retTypePart  = m.proto.substr(m.postTemplate, m.nameStart - m.postTemplate);
       const std::string postName = m.proto.substr(m.nameStart + nameLen, m.proto.size() - m.nameStart - nameLen);
 
-      const auto li = CTML::Node("li.is-family-code", preName)
-                          .AddChild(CTML::Node("a").SetAttr("href", "#" + m.ID.str()).AddChild(CTML::Node("b", m.name)))
-                          .AppendText(postName);
+      auto li = CTML::Node("li.is-family-code");
+      if(!templatePart.empty()) li.AddChild(CTML::Node("span.hdoc-overview-template", templatePart)).AppendRawHTML("<br>");
+      li.AddChild(CTML::Node("a").SetAttr("href", "#" + m.ID.str()).AddChild(CTML::Node("b", m.name)));
+      li.AppendText(postName);
+      if(!retTypePart.empty()) li.AppendRawHTML(" &rarr; ").AppendText(retTypePart);
+      if(m.access == clang::AS_private) li.ToggleClass("hdoc-private");
       ul.AddChild(li);
     }
     main.AddChild(ul);
@@ -862,7 +869,7 @@ void hdoc::serde::HTMLWriter::printRecord(const hdoc::types::RecordSymbol& c) co
   for (const auto& base : inheritedRecords) {
     const auto& ic = this->index->records.entries.at(base.id);
     if (hasMethodOverviewHeading == false && c.methodIDs.size() > 0) {
-      main.AddChild(CTML::Node("h2", "Method Overview"));
+      main.AddChild(CTML::Node("h2", "Member Function Overview"));
       hasMethodOverviewHeading = true;
     }
     printInheritedMethods(this->index, ic, main);
@@ -870,7 +877,7 @@ void hdoc::serde::HTMLWriter::printRecord(const hdoc::types::RecordSymbol& c) co
 
   // List of methods with full information
   if (sortedMethodIDs.size() > 0) {
-    main.AddChild(CTML::Node("h2", "Methods"));
+    main.AddChild(CTML::Node("h2", "Member Functions"));
     for (const auto& methodID : sortedMethodIDs) {
       // TODO: get to the bottom of what's causing empty method decls to appear in Writer.hpp
       // For now this hack just avoids printing them, but this shouldn't be necessary

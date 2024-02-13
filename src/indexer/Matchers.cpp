@@ -146,6 +146,9 @@ void hdoc::indexer::matchers::FunctionMatcher::run(const clang::ast_matchers::Ma
   if (f.isCtorOrDtor == false) {
     f.returnType.name = res->getReturnType().getAsString(pp);
     f.returnType.id   = getTypeSymbolID(res->getReturnType());
+  } else {
+    // simplify name of the constructors to remove template arguments in case it is a specialization
+    f.name = std::regex_replace(f.name, std::regex("<.*>"), "");
   }
   f.proto          = getFunctionSignature(f);
   f.isRecordMember = res->isCXXClassMember();
