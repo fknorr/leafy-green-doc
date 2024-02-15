@@ -35,6 +35,7 @@ struct Config {
   std::vector<std::string> includePaths;                 ///< Include paths passed on to Clang
   std::vector<std::string> ignorePaths;                  ///< Paths from which matches should be ignored
   std::vector<std::string> ignoreNamespaces;             ///< Namespaces from which matches should be ignored
+  std::vector<std::string> detailNamespaces;             ///< Namespaces which should be considered "detail" namespaces
   bool                     ignorePrivateMembers = false; ///< Should private members of records be ignored?
   std::filesystem::path    homepage;                     ///< Path to "homepage" markdown file
   std::vector<std::filesystem::path> mdPaths;            ///< Paths to markdown pages

@@ -229,6 +229,19 @@ hdoc::frontend::Frontend::Frontend(int argc, char** argv, hdoc::types::Config* c
     }
   }
 
+  // Get substrings of namespaces that should be considered "detail" namespaces
+  if (const auto& detailNamespaces = toml["detail"]["namespaces"].as_array()) {
+    for (const auto& i : *detailNamespaces) {
+      std::string s = i.value_or(std::string(""));
+      if (s == "") {
+        spdlog::warn("A detail namespace directive from .hdoc.toml was malformed, ignoring it.");
+        continue;
+      }
+      spdlog::info("Detail namespaces containing: {}", s);
+      cfg->detailNamespaces.emplace_back(s);
+    }
+  }
+
   if (const toml::value<bool>* ignorePrivateMembers = toml["ignore"]["ignore_private_members"].as_boolean()) {
     cfg->ignorePrivateMembers = ignorePrivateMembers->get();
   }

@@ -81,13 +81,14 @@ const clang::ClassTemplateDecl* getNonSpecializedVersionOfDecl(const clang::TagD
   return NULL;
 }
 
-void findParentNamespace(hdoc::types::Symbol& s, const clang::NamedDecl* d) {
+void fillNamespace(hdoc::types::Symbol& s, const clang::NamedDecl* d, const hdoc::types::Config* cfg) {
   const auto* dc = d->getLexicalDeclContext();
   if (const auto* n = llvm::dyn_cast_or_null<clang::NamespaceDecl>(dc)) {
     s.parentNamespaceID = buildID(n);
   } else if (const auto* n = llvm::dyn_cast_or_null<clang::RecordDecl>(dc)) {
     s.parentNamespaceID = buildID(n);
   }
+  s.isDetail = hdoc::indexer::matchers::utils::isEnclosingNamespaceInList(d, cfg->detailNamespaces);
 }
 
 bool isInIgnoreList(const clang::Decl* d, const hdoc::types::Config* cfg) {

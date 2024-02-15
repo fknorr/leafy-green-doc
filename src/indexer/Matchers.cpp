@@ -173,7 +173,7 @@ void hdoc::indexer::matchers::FunctionMatcher::run(const clang::ast_matchers::Ma
   f.proto          = getFunctionSignature(f);
   f.isRecordMember = res->isCXXClassMember();
 
-  findParentNamespace(f, res);
+  fillNamespace(f, res, this->cfg);
   this->index->functions.update(f.ID, f);
 }
 
@@ -245,7 +245,7 @@ void hdoc::indexer::matchers::UsingMatcher::run(const clang::ast_matchers::Match
     processSymbolComment(a, comment, res->getASTContext());
   }
 
-  findParentNamespace(a, res);
+  fillNamespace(a, res, this->cfg);
   this->index->aliases.update(a.ID, a);
 }
 
@@ -531,7 +531,7 @@ void hdoc::indexer::matchers::RecordMatcher::run(const clang::ast_matchers::Matc
     processSymbolComment(c, comment, res->getASTContext());
   }
 
-  findParentNamespace(c, res);
+  fillNamespace(c, res, this->cfg);
   this->index->records.update(c.ID, c);
 }
 
@@ -593,7 +593,7 @@ void hdoc::indexer::matchers::EnumMatcher::run(const clang::ast_matchers::MatchF
     processSymbolComment(e, comment, res->getASTContext());
   }
 
-  findParentNamespace(e, res);
+  fillNamespace(e, res, this->cfg);
   this->index->enums.update(e.ID, e);
 }
 
@@ -618,6 +618,6 @@ void hdoc::indexer::matchers::NamespaceMatcher::run(const clang::ast_matchers::M
   n.ID = ID;
   fillOutSymbol(n, res, this->cfg->rootDir);
 
-  findParentNamespace(n, res);
+  fillNamespace(n, res, this->cfg);
   this->index->namespaces.update(n.ID, n);
 }

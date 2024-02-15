@@ -200,11 +200,11 @@ static void printNewPage(const hdoc::types::Config&   cfg,
 
   // Add links to all of the standard sections
   menuUL.AddChild(CTML::Node("p.menu-label", "API Documentation"));
-  menuUL.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Functions").SetAttr("href", "functions.html")));
-  menuUL.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Records").SetAttr("href", "records.html")));
-  menuUL.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Aliases").SetAttr("href", "aliases.html")));
-  menuUL.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Enums").SetAttr("href", "enums.html")));
   menuUL.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Namespaces").SetAttr("href", "namespaces.html")));
+  menuUL.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Records").SetAttr("href", "records.html")));
+  menuUL.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Enums").SetAttr("href", "enums.html")));
+  menuUL.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Functions").SetAttr("href", "functions.html")));
+  menuUL.AddChild(CTML::Node("li").AddChild(CTML::Node("a", "Aliases").SetAttr("href", "aliases.html")));
   aside.AddChild(menuUL);
 
   columnsDiv.AddChild(aside);
@@ -542,9 +542,11 @@ void hdoc::serde::HTMLWriter::printFunctions() const {
       continue;
     }
     numFunctions += 1;
-    ul.AddChild(CTML::Node("li")
+    auto li = CTML::Node("li")
                     .AddChild(CTML::Node("a.is-family-code", f.name).SetAttr("href", f.url()))
-                    .AppendText(getSymbolBlurb(f)));
+                    .AppendText(getSymbolBlurb(f));
+    if (f.isDetail) li.ToggleClass("hdoc-detail");
+    ul.AddChild(li);
     CTML::Node page("main");
     this->pool.async(
         [&](const hdoc::types::FunctionSymbol& func, CTML::Node pg) {
@@ -619,9 +621,11 @@ void hdoc::serde::HTMLWriter::printAliases() const {
       continue;
     }
     numUsings += 1;
-    ul.AddChild(CTML::Node("li")
+    auto li = CTML::Node("li")
                     .AddChild(CTML::Node("a.is-family-code", u.name).SetAttr("href", u.url()))
-                    .AppendText(getSymbolBlurb(u)));
+                    .AppendText(getSymbolBlurb(u));
+    if (u.isDetail) li.ToggleClass("hdoc-detail");
+    ul.AddChild(li);
     CTML::Node page("main");
     this->pool.async(
         [&](const hdoc::types::AliasSymbol& alias, CTML::Node pg) {
@@ -925,9 +929,11 @@ void hdoc::serde::HTMLWriter::printRecords() const {
   CTML::Node ul("ul");
   for (const auto& id : getSortedIDs(map2vec(this->index->records), this->index->records)) {
     const auto& c = this->index->records.entries.at(id);
-    ul.AddChild(CTML::Node("li")
+    auto li = CTML::Node("li")
                     .AddChild(CTML::Node("a.is-family-code", c.type + " " + c.name).SetAttr("href", c.url()))
-                    .AppendText(getSymbolBlurb(c)));
+                    .AppendText(getSymbolBlurb(c));
+    if (c.isDetail) li.ToggleClass("hdoc-detail");
+    ul.AddChild(li);
     this->pool.async([&](const hdoc::types::RecordSymbol& cls) { printRecord(cls); }, c);
   }
   this->pool.wait();
@@ -1067,9 +1073,11 @@ void hdoc::serde::HTMLWriter::printEnums() const {
   CTML::Node ul("ul");
   for (const auto& id : getSortedIDs(map2vec(this->index->enums), this->index->enums)) {
     const auto& e = this->index->enums.entries.at(id);
-    ul.AddChild(CTML::Node("li")
+    auto li = CTML::Node("li")
                     .AddChild(CTML::Node("a.is-family-code", e.type + " " + e.name).SetAttr("href", e.url()))
-                    .AppendText(getSymbolBlurb(e)));
+                    .AppendText(getSymbolBlurb(e));
+    if (e.isDetail) li.ToggleClass("hdoc-detail");
+    ul.AddChild(li);
     this->pool.async([&](const hdoc::types::EnumSymbol& en) { printEnum(en); }, e);
   }
   this->pool.wait();

@@ -18,7 +18,7 @@ void fillOutSymbol(hdoc::types::Symbol& s, const clang::NamedDecl* d, const std:
 const clang::ClassTemplateDecl* getNonSpecializedVersionOfDecl(const clang::TagDecl* tagdecl);
 
 /// @brief Find the parent namespace (either record or an actual namespace) of a decl
-void findParentNamespace(hdoc::types::Symbol& s, const clang::NamedDecl* d);
+void fillNamespace(hdoc::types::Symbol& s, const clang::NamedDecl* d, const hdoc::types::Config* cfg);
 
 /// @brief Check if a decl is defined in a non-existent file or in the set of ignored paths or namespaces
 bool isInIgnoreList(const clang::Decl* d, const hdoc::types::Config* cfg);

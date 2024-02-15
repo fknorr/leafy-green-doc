@@ -52,6 +52,14 @@ body {
     opacity: 1;
 }
 
+.hdoc-detail {
+    opacity: 0.5;
+    background-color: #f5f5f5;
+}
+.hdoc-detail:hover {
+    opacity: 1;
+}
+
 .hdoc-overview-template {
     font-size: smaller;
 }
