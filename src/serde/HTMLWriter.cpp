@@ -863,9 +863,15 @@ void hdoc::serde::HTMLWriter::printRecord(const hdoc::types::RecordSymbol& c) co
       const hdoc::types::FunctionSymbol m = this->index->functions.entries.at(methodID);
 
       // Divide up the full function declaration so its name can be bold in the HTML
+      // and to reformat it for the overview list with trailing return type
       const uint64_t    nameLen  = m.name.size();
       const std::string templatePart = m.proto.substr(0, m.postTemplate);
-      const std::string retTypePart  = m.proto.substr(m.postTemplate, m.nameStart - m.postTemplate);
+      std::string retTypePart  = m.proto.substr(m.postTemplate, m.nameStart - m.postTemplate);
+      const std::string inlineMarker = "inline";
+      if(retTypePart.starts_with(inlineMarker)) {
+        retTypePart = retTypePart.substr(inlineMarker.size());
+      }
+      hdoc::utils::trim(retTypePart);
       const std::string postName = m.proto.substr(m.nameStart + nameLen, m.proto.size() - m.nameStart - nameLen);
 
       auto li = CTML::Node("li.is-family-code");

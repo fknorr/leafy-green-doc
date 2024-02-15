@@ -14,6 +14,11 @@ void rtrim(std::string& s) {
   s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(), s.end());
 }
 
+void trim(std::string& s) {
+  ltrim(s);
+  rtrim(s);
+}
+
 std::string replaceAll(std::string& str, const std::string& oldvalue, const std::string& newvalue) {
   size_t start = 0;
 

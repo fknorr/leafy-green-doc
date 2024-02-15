@@ -12,6 +12,7 @@
 #include "indexer/Indexer.hpp"
 #include "indexer/Matchers.hpp"
 #include "support/ParallelExecutor.hpp"
+#include "support/StringUtils.hpp"
 
 // Check if a symbol is a child of the given namespace
 static bool isChild(const hdoc::types::Symbol& ns, const hdoc::types::Symbol& s) {
@@ -117,6 +118,43 @@ void hdoc::indexer::Indexer::updateRecordNames() {
 
         c.proto += baseRecord.name;
         count++;
+      }
+    }
+  }
+}
+
+void hdoc::indexer::Indexer::updateMemberFunctions() {
+  for (auto& [k, c] : this->index.records.entries) {
+    for (auto& symbol : c.methodIDs) {
+      auto& f = this->index.functions.entries[symbol];
+      // split the proto into parts
+      std::string templatePart = f.proto.substr(0, f.postTemplate);
+      std::string preNamePart = f.proto.substr(f.postTemplate, f.nameStart - f.postTemplate);
+      std::string restPart = f.proto.substr(f.nameStart);
+      std::string name = f.name;
+      // and update them individually
+      auto fixTypeParam = [&](std::string& s) {
+        for(size_t i=0; i<c.templateParams.size(); i++) {
+          s = hdoc::utils::replaceAll(s, "type-parameter-0-" + std::to_string(i), c.templateParams[i].name);
+        }
+      };
+      fixTypeParam(templatePart);
+      fixTypeParam(preNamePart);
+      fixTypeParam(restPart);
+      fixTypeParam(name);
+      // so that we can reconstruct the offsets
+      std::string newProto = templatePart + preNamePart + restPart;
+      if(newProto != f.proto) {
+        spdlog::debug("Updating function proto from\n  {} to \n  {}\n  name: {} -> {}", f.proto, newProto, f.name, name);
+        f.proto = templatePart + preNamePart + restPart;
+        f.name = name;
+        f.postTemplate = templatePart.size();
+        f.nameStart = templatePart.size() + preNamePart.size();
+      }
+      // also fix parameters
+      for(auto& param : f.params) {
+        fixTypeParam(param.type.name);
+        fixTypeParam(param.defaultValue);
       }
     }
   }

@@ -12,6 +12,9 @@ void ltrim(std::string& s);
 /// Trim any trailing spaces in str.
 void rtrim(std::string& s);
 
+/// Trim any leading or trailing spaces in str.
+void trim(std::string& s);
+
 /// Replace all instances of oldvalue in str with newvalue.
 std::string replaceAll(std::string& str, const std::string& oldvalue, const std::string& newvalue);
 

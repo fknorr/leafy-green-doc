@@ -21,6 +21,9 @@ public:
   /// parsed as the inherited records might not be in the database at parse-time.
   void updateRecordNames();
 
+  /// @brief Postprocess the member function string representations to eliminate stray type-parameter-0-0 etc.
+  void updateMemberFunctions();
+
   /// @brief Update NamespaceSymbols with the IDs of their children
   void resolveNamespaces();
 
