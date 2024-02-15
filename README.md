@@ -1,15 +1,30 @@
-<h1 align="center">
-    <img
-        width="300"
-        alt="hdoc logo"
-        src="assets/icon.png">
-</h1>
-
 <h3 align="center">
-    hdoc: the modern documentation tool for C++
+    🥬doc: a documentation tool for C++
 </h3>
 
-See [hdoc.io](https://hdoc.io/) for more details.
+This is a fork of [hdoc](https://hdoc.io/), with additional functionality (and without online functionality).
+
+It is designed specifically to add the features required to generate documentation for [Celerity](https://celerity.github.io/).  
+We are happy to integrate useful PRs, but we don't currently have the bandwidth to accomodate feature requests. 
+
+### New features and changes compared to hdoc
+
+ * Support documenting **explicit template specializations** of records
+ * Support **markdown syntax** in doc comments
+ * Document **aliases (i.e. usings)**, both at top level namespaces and in records
+ * Correctly resolve file locations for **symbols defined in macros** (and therefore include them in the docs)
+ * Include operators in documentation and format them properly
+ * Various improvements to presentation, especially in the presence of complex member function signatures
+ * Builds with Clang/LLVM 17
+
+### Broken/unmaintained features compared to hdoc
+
+ * Everything related to the hosting/online functionality of hdoc is unmaintained
+ * JSON serialization of the symbol database is unsupported
+ * Search (we use a search system provided by algolia)
+
+# Original hdoc documentation follows
+
 Usage documentation is hosted at [hdoc.io/docs](https://hdoc.io/docs).
 
 ## An important notice about this repository
