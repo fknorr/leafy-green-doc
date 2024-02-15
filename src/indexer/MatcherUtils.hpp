@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "types/Config.hpp"
 #include "types/Symbols.hpp"
 #include "clang/AST/Comment.h"
 #include "clang/AST/DeclTemplate.h"
@@ -19,10 +20,8 @@ const clang::ClassTemplateDecl* getNonSpecializedVersionOfDecl(const clang::TagD
 /// @brief Find the parent namespace (either record or an actual namespace) of a decl
 void findParentNamespace(hdoc::types::Symbol& s, const clang::NamedDecl* d);
 
-/// @brief Check if a decl is defined in a non-existent file or in the set of ignored paths
-bool isInIgnoreList(const clang::Decl*              d,
-                    const std::vector<std::string>& ignorePaths,
-                    const std::filesystem::path&    rootDir);
+/// @brief Check if a decl is defined in a non-existent file or in the set of ignored paths or namespaces
+bool isInIgnoreList(const clang::Decl* d, const hdoc::types::Config* cfg);
 
 /// @brief Check if the decl is in an anonymous namespace
 bool isInAnonymousNamespace(const clang::Decl* d);

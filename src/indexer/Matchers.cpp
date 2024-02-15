@@ -12,6 +12,26 @@
 #include "clang/AST/Comment.h"
 #include "clang/Lex/Lexer.h"
 
+bool hdoc::indexer::matchers::utils::isEnclosingNamespaceInList(const clang::Decl* decl, const std::vector<std::string>& list) {
+  auto* parent = decl->getDeclContext();
+  while (parent) {
+    if (auto* namespaceDecl = llvm::dyn_cast<clang::NamespaceDecl>(parent)) {
+      if (namespaceDecl->isAnonymousNamespace()) {
+        parent = parent->getParent();
+        continue;
+      }
+      auto name = namespaceDecl->getNameAsString();
+      for (const auto& substr : list) {
+        if (name.find(substr) != std::string::npos) {
+          return true;
+        }
+      }
+    }
+    parent = parent->getParent();
+  }
+  return false;
+}
+
 /// @brief Try to get a SymbolID from a QualType, and return an empty SymbolID if it's not possible
 static hdoc::types::SymbolID getTypeSymbolID(const clang::QualType& typ) {
   // Get a TagDecl from the QualType, stripping pointers and references if needed.
@@ -58,7 +78,7 @@ void hdoc::indexer::matchers::FunctionMatcher::run(const clang::ast_matchers::Ma
 
   // Ignore invalid matches, matches in ignored files, and static functions
   if (res == nullptr ||
-      isInIgnoreList(res, this->cfg->ignorePaths, this->cfg->rootDir) || !res->getSourceRange().isValid() ||
+      isInIgnoreList(res, this->cfg) || !res->getSourceRange().isValid() ||
       (res->isStatic() && !res->isCXXClassMember()) || isInAnonymousNamespace(res) ||
       (res->getAccess() == clang::AS_private && cfg->ignorePrivateMembers == true)) {
     return;
@@ -173,12 +193,12 @@ void hdoc::indexer::matchers::UsingMatcher::run(const clang::ast_matchers::Match
   // Count the number of aliases matched
   this->index->aliases.numMatches++;
 
-  if(isInIgnoreList(res, this->cfg->ignorePaths, this->cfg->rootDir)) spdlog::warn("Ignoring Using [ignore list] : {}", res->getQualifiedNameAsString());
+  if(isInIgnoreList(res, this->cfg)) spdlog::warn("Ignoring Using [ignore list] : {}", res->getQualifiedNameAsString());
   if(!res->getSourceRange().isValid()) spdlog::warn("Ignoring Using [invalid source range] : {}", res->getQualifiedNameAsString());
 
   // Ignore invalid matches and matches in ignored files
   if (res == nullptr ||
-      isInIgnoreList(res, this->cfg->ignorePaths, this->cfg->rootDir) || !res->getSourceRange().isValid() ||
+      isInIgnoreList(res, this->cfg) || !res->getSourceRange().isValid() ||
       (res->getAccess() == clang::AS_private && cfg->ignorePrivateMembers == true)) {
     return;
   }
@@ -286,7 +306,7 @@ void hdoc::indexer::matchers::RecordMatcher::run(const clang::ast_matchers::Matc
 
   // Ignore invalid matches
   if (res == nullptr || !res->isCompleteDefinition() || !res->getSourceRange().isValid() ||
-      isInIgnoreList(res, this->cfg->ignorePaths, this->cfg->rootDir) || isInAnonymousNamespace(res)) {
+      isInIgnoreList(res, this->cfg) || isInAnonymousNamespace(res)) {
     return;
   }
 
@@ -332,7 +352,7 @@ void hdoc::indexer::matchers::RecordMatcher::run(const clang::ast_matchers::Matc
   // Get methods and decls (what's the difference?) for this record
   for (const auto* m : res->methods()) {
     if (m == nullptr || m->isImplicit() ||
-        isInIgnoreList(m, this->cfg->ignorePaths, this->cfg->rootDir) || isInAnonymousNamespace(m) ||
+        isInIgnoreList(m, this->cfg) || isInAnonymousNamespace(m) ||
         (m->getAccess() == clang::AS_private && cfg->ignorePrivateMembers == true)) {
       continue;
     }
@@ -341,7 +361,7 @@ void hdoc::indexer::matchers::RecordMatcher::run(const clang::ast_matchers::Matc
   for (const auto* d : res->decls()) {
     if (const auto* ftd = llvm::dyn_cast<clang::FunctionTemplateDecl>(d)) {
       if (ftd == nullptr || ftd->isImplicit() ||
-          isInIgnoreList(ftd, this->cfg->ignorePaths, this->cfg->rootDir) || isInAnonymousNamespace(ftd) ||
+          isInIgnoreList(ftd, this->cfg) || isInAnonymousNamespace(ftd) ||
           (ftd->getAccess() == clang::AS_private && cfg->ignorePrivateMembers == true)) {
         continue;
       }
@@ -352,7 +372,7 @@ void hdoc::indexer::matchers::RecordMatcher::run(const clang::ast_matchers::Matc
       if (!alias) alias = llvm::dyn_cast<clang::UsingDecl>(d);
       if (!alias) alias = llvm::dyn_cast<clang::TypeAliasDecl>(d);
       if (alias == nullptr || alias->isImplicit() ||
-          isInIgnoreList(alias, this->cfg->ignorePaths, this->cfg->rootDir) || isInAnonymousNamespace(alias) ||
+          isInIgnoreList(alias, this->cfg) || isInAnonymousNamespace(alias) ||
           (alias->getAccess() == clang::AS_private && cfg->ignorePrivateMembers == true)) {
         continue;
       }
@@ -523,7 +543,7 @@ void hdoc::indexer::matchers::EnumMatcher::run(const clang::ast_matchers::MatchF
 
   // Ignore invalid matches and anonymous enums
   if (res == nullptr || res->getNameAsString() == "" ||
-      isInIgnoreList(res, this->cfg->ignorePaths, this->cfg->rootDir) || isInAnonymousNamespace(res)) {
+      isInIgnoreList(res, this->cfg) || isInAnonymousNamespace(res)) {
     return;
   }
 
@@ -585,7 +605,7 @@ void hdoc::indexer::matchers::NamespaceMatcher::run(const clang::ast_matchers::M
 
   // Ignore invalid matches and anonymous enums
   if (res == nullptr || res->getNameAsString() == "" ||
-      isInIgnoreList(res, this->cfg->ignorePaths, this->cfg->rootDir) || isInAnonymousNamespace(res)) {
+      isInIgnoreList(res, this->cfg) || isInAnonymousNamespace(res)) {
     return;
   }
 

@@ -13,6 +13,7 @@ We are happy to integrate useful PRs, but we don't currently have the bandwidth 
  * Support **markdown syntax** in doc comments
  * Document **aliases (i.e. usings)**, both at top level namespaces and in records
  * Correctly resolve file locations for **symbols defined in macros** (and therefore include them in the docs)
+ * Allow ignoring symbols on namespace basis (in addition to file path)
  * Include operators in documentation and format them properly
  * Various improvements to presentation, especially in the presence of complex member function signatures
  * Builds with Clang/LLVM 17

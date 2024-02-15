@@ -216,6 +216,19 @@ hdoc::frontend::Frontend::Frontend(int argc, char** argv, hdoc::types::Config* c
     }
   }
 
+  // Get substrings of namespaces that should be ignored
+  if (const auto& ignoreNamespaces = toml["ignore"]["namespaces"].as_array()) {
+    for (const auto& i : *ignoreNamespaces) {
+      std::string s = i.value_or(std::string(""));
+      if (s == "") {
+        spdlog::warn("A namespace ignore directive from .hdoc.toml was malformed, ignoring it.");
+        continue;
+      }
+      spdlog::info("Ignoring namespaces containing: {}", s);
+      cfg->ignoreNamespaces.emplace_back(s);
+    }
+  }
+
   if (const toml::value<bool>* ignorePrivateMembers = toml["ignore"]["ignore_private_members"].as_boolean()) {
     cfg->ignorePrivateMembers = ignorePrivateMembers->get();
   }

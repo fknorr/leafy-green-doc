@@ -4,6 +4,8 @@
 #include "MatcherUtils.hpp"
 #include "support/StringUtils.hpp"
 
+#include "Matchers.hpp"
+
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/FileManager.h"
@@ -88,9 +90,11 @@ void findParentNamespace(hdoc::types::Symbol& s, const clang::NamedDecl* d) {
   }
 }
 
-bool isInIgnoreList(const clang::Decl*              d,
-                    const std::vector<std::string>& ignorePaths,
-                    const std::filesystem::path&    rootDir) {
+bool isInIgnoreList(const clang::Decl* d, const hdoc::types::Config* cfg) {
+
+  // handle path-based ignore
+  const auto ignorePaths = cfg->ignorePaths; 
+  const auto rootDir = cfg->rootDir;
 
   const auto fileLoc = d->getASTContext().getSourceManager().getFileLoc(d->getLocation()); // Resolves macro locations
   const auto rawPath = std::filesystem::path(d->getASTContext().getSourceManager().getFilename(fileLoc).str());
@@ -120,7 +124,8 @@ bool isInIgnoreList(const clang::Decl*              d,
       return true;
     }
   }
-  return false;
+
+  return hdoc::indexer::matchers::utils::isEnclosingNamespaceInList(d, cfg->ignoreNamespaces);
 }
 
 /// Decls in anonymous namespaces should not be documented
