@@ -104,9 +104,11 @@ struct TemplateParam {
 /// @brief Represents a using declaration or similar alias
 struct AliasSymbol : public Symbol {
 public:
-  TypeRef                target;                             ///< The type this using declaration aliases
-  bool                   isRecordMember = false;             ///< Is it a member alias?
-  clang::AccessSpecifier access         = clang::AS_private; ///< Access type, i.e. public/protected/private
+  TypeRef                    target;                             ///< The type this using declaration aliases
+  bool                       isRecordMember = false;             ///< Is it a member alias?
+  clang::AccessSpecifier     access         = clang::AS_private; ///< Access type, i.e. public/protected/private
+  std::vector<TemplateParam> templateParams;                     ///< All of the template parameters for this alias
+  std::string                proto;                              ///< Full "prototype", including template parameters
 
   std::string url() const {
     return "a" + this->ID.str() + ".html";
